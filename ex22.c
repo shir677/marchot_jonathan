@@ -341,11 +341,11 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
 }
 }
 
-void scan_directory(const char* user_dir,char* input_file,char* output_file)
-{
+void scan_directory(const char* user_dir, char* input_file, char* output_file) {
     DIR* dir = opendir(user_dir);
     if (dir == NULL) {
         perror("Error in: opendir");
+        return;
     }
 
     struct dirent* entry;
@@ -354,7 +354,7 @@ void scan_directory(const char* user_dir,char* input_file,char* output_file)
             // Skip . and .. entries
             continue;
         }
-        char* student_name= entry->d_name;
+        char* student_name = entry->d_name;
 
         char subdir_path[BUFSIZE];
         strcpy(subdir_path, user_dir);
@@ -363,75 +363,67 @@ void scan_directory(const char* user_dir,char* input_file,char* output_file)
 
         DIR* subdir = opendir(subdir_path);
         if (subdir == NULL) {
-        // Failed to open subdirectory
-        perror("Error in: opendir");
+            // Failed to open subdirectory
+            perror("Error in: opendir");
+            continue;
         }
 
         int has_c_file = 0;
         struct dirent* c_entry;
         while ((c_entry = readdir(subdir)) != NULL) {
-        if (strcmp(c_entry->d_name, ".") == 0 || strcmp(c_entry->d_name, "..") == 0) {
-            // Skip . and .. entries
-            continue;
-        }
-        int len=strlen(c_entry->d_name);
-
-        if (len >= 2 && strcmp(c_entry->d_name + len - 2, ".c") == 0) {
-
-            char c_file_path[BUFSIZE];
-            strcpy(c_file_path, subdir_path);
-            strcat(c_file_path, "/");
-            strcat(c_file_path, c_entry->d_name);
-
-            if(!is_regular_file(c_file_path))
-            {
-                //if file is not a regular file, continue.
+            if (strcmp(c_entry->d_name, ".") == 0 || strcmp(c_entry->d_name, "..") == 0) {
+                // Skip . and .. entries
                 continue;
             }
+            int len = strlen(c_entry->d_name);
 
-            // Found a C file
-            has_c_file = 1;
+            if (len >= 2 && strcmp(c_entry->d_name + len - 2, ".c") == 0) {
+                char c_file_path[BUFSIZE];
+                strcpy(c_file_path, subdir_path);
+                strcat(c_file_path, "/");
+                strcat(c_file_path, c_entry->d_name);
 
-            char out_file_path[BUFSIZE];
-            strcpy(out_file_path, c_file_path);
-            out_file_path[strlen(out_file_path) - 2] = '\0';
-            strcat(out_file_path, ".out");
+                if (is_directory(c_file_path)) {
+                    // If the file is not a regular file, continue.
+                    continue;
+                }
 
+                // Found a C file
+                has_c_file = 1;
 
-            int compiled=compile_c_program(c_file_path,out_file_path,student_name);
+                char out_file_path[BUFSIZE];
+                strcpy(out_file_path, c_file_path);
+                out_file_path[strlen(out_file_path) - 2] = '\0';
+                strcat(out_file_path, ".out");
 
-            int run=0;
+                int compiled = compile_c_program(c_file_path, out_file_path, student_name);
 
-            if(compiled){
-            run=run_c_program(input_file, out_file_path, subdir_path, student_name);
+                int run = 0;
+
+                if (compiled) {
+                    run = run_c_program(input_file, out_file_path, subdir_path, student_name);
+                }
+
+                if (run) {
+                    compare_output(student_name, subdir_path, output_file);
+                }
             }
-
-            if(run)
-            {
-                compare_output(student_name, subdir_path, output_file);
-            }
-
         }
 
+        if (!has_c_file) {
+            add_to_csv(student_name, "0", "NO_C_FILE");
+        }
+
+        if (closedir(subdir) == -1) {
+            perror("Error in: closedir");
+        }
     }
 
-    if (!has_c_file)
-    {
-        add_to_csv(student_name,"0","NO_C_FILE");
-    }
-
-    if (closedir(subdir)==-1)
-    {
-        perror("Error in: closedir");   
-    }
-
-    }
-
-    if (closedir(dir)==-1)
-    {
-        perror("Error in: closedir");   
+    if (closedir(dir) == -1) {
+        perror("Error in: closedir");
     }
 }
+
 
 
 
