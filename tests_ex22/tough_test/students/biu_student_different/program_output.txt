@@ -1,6 +1,0 @@
-I love recursion. Can you guess what my algorithm is?
-P l e a s e 
-  e n t e r 
-  t w o 
-  n u m b er s         
-6

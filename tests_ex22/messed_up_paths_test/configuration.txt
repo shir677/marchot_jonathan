@@ -1,3 +1,0 @@
-messing/up/students
-messing/up/paths/input/input
-messing/up/paths/expected_output/correct_output
