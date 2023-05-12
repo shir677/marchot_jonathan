@@ -31,7 +31,6 @@ int is_directory_with_only_subdirectories(const char* path) {
     DIR* dir = opendir(path);
     if (dir == NULL) {
         // Failed to open directory
-        perror("Error in: opendir");
         return 0;
     }
 
@@ -55,7 +54,10 @@ int is_directory_with_only_subdirectories(const char* path) {
         }
     }
 
-    closedir(dir);
+    if (closedir(dir)==-1)
+    {
+        perror("Error in: closedir");
+    }
 
     return only_subdirs;
 }
@@ -92,7 +94,12 @@ void check_valid_paths(char* user_dir,char* input_file,char* output_file)
         exit(-1);
     }
 
-    close(fd1);
+    if (close(fd1)==-1)
+    {
+        perror("Error in: close");
+        exit(-1);
+
+    }
 
     int fd2 = open(output_file, O_RDONLY);
     if (fd2 == -1 || !is_regular_file(output_file)) {
@@ -100,7 +107,12 @@ void check_valid_paths(char* user_dir,char* input_file,char* output_file)
         perror("Output file not exist\n");
         exit(-1);
     }
-    close(fd2);
+    
+    if (close(fd2)==-1)
+    {
+        perror("Error in: close");
+        exit(-1);
+    }
 
 
 }
@@ -164,7 +176,7 @@ void add_to_csv(char *student_name, char* score, char *comment) {
 
 
     if (write(fd, line, strlen(line)) == -1) {
-        perror("Error in: write");
+        
     }
 
     if (close(fd) == -1) {
@@ -183,6 +195,8 @@ int compile_c_program(char* c_file_path,char* out_file_path, char* student_name)
     if (pid < 0) {
         // Fork failed
         perror("Error in: fork");
+        return 0;
+
     } else if (pid == 0) {
         // Child process
         int fd_err = open("errors.txt", O_WRONLY | O_APPEND | O_CREAT, 0644);
@@ -234,6 +248,7 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     if (pid < 0) {
     // Fork failed
     perror("Error in: fork");
+    return 0;
     } else if (pid == 0) {
     // Child process
 
@@ -288,12 +303,11 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     // Program took too long to run
     // Kill the child process
     kill(pid, SIGKILL);
-
     add_to_csv(student_name,"20","TIMEOUT");
+    return 0;
     } 
     }
     else{
-
     run=1;
     }
     return run;
@@ -311,6 +325,7 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
     if (pid < 0) {
         // Fork failed
         perror("Error in: fork");
+        
     } else if (pid == 0) {
         char* args[] = {"./comp.out", program_output_file, output_file, NULL};
         execvp("./comp.out", args);
