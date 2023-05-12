@@ -243,7 +243,6 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     strcat(program_output_file, "/");
     strcat(program_output_file,"program_output.txt");
 
-    int run=0;
     pid_t pid = fork();
     if (pid < 0) {
     // Fork failed
@@ -297,7 +296,7 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     if (wait(&status) == -1) {
         perror("Error in: wait");
     }
-    else if (WIFSIGNALED(status)) {
+    if (WIFSIGNALED(status)) {
     // Program was terminated by a signal
     if (WTERMSIG(status) == SIGALRM) {
     // Program took too long to run
@@ -307,10 +306,15 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     return 0;
     } 
     }
-    else{
-    run=1;
+
+    if (remove(out_file_path)==-1)
+    {
+        perror("Error in: remove");
+        return 0;
     }
-    return run;
+
+    return 1;
+
 }
 }
 
@@ -325,7 +329,7 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
     if (pid < 0) {
         // Fork failed
         perror("Error in: fork");
-        
+
     } else if (pid == 0) {
         char* args[] = {"./comp.out", program_output_file, output_file, NULL};
         execvp("./comp.out", args);
@@ -336,7 +340,9 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
     int status1;
     if (waitpid(pid, &status1, 0) == -1) {
         perror("Error in: waitpid");
-    } else if (WIFEXITED(status1)) {
+    }
+
+    if (WIFEXITED(status1)) {
         // Child process exited normally
         int return_value = WEXITSTATUS(status1);
         if(return_value==2){
@@ -350,8 +356,10 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
             add_to_csv(student_name,"100","EXCELLENT");
         }  
     }
-    else{
 
+    if (remove(program_output_file)==-1)
+    {
+        perror("Error in: remove");
     }
 }
 }
