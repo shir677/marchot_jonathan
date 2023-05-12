@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 
     if (fd1 == -1 || fd2 == -1) {
         perror("Error in: open");
-        return -1;
+        exit(-1);
     }
 
 
@@ -42,11 +42,10 @@ int main(int argc, char *argv[]) {
             read2=read(fd2, &buf2, 1);
         }
 
-
         if (read1==-1 || read2==-1)
         {
             perror("Error in: read");
-            break;
+            exit(-1);
         }
 
         if(read1==0 || read2==0)
@@ -58,19 +57,16 @@ int main(int argc, char *argv[]) {
         {
             identity=0;
         }
+
+        space1=0;
+        space2=0;
         
         if (buf1 == ' ' || buf1 == '\t' || buf1 == '\n' || buf1 == '\r') {
             space1=1;
         }
-        else{
-            space1=0;
-        }
         
         if (buf2 == ' ' || buf2 == '\t' || buf2 == '\n' || buf2 == '\r') {
             space2=1;
-        }
-        else{
-            space2=0;
         }
 
         if(!space1 && !space2){
@@ -93,7 +89,7 @@ if(read1!=0)
             }
             if (read1 == -1) {
                 perror("Error in: read");
-                break;
+                exit(-1);
             }
         }
         if (!(buf1 == ' ' || buf1 == '\t' || buf1 == '\n' || buf1 == '\r'))
@@ -112,7 +108,7 @@ if(read1!=0)
             }
             if (read1 == -1) {
                 perror("Error in: read");
-                break;
+                exit(-1);
             }
         }
         if (!(buf2 == ' ' || buf2 == '\t' || buf2 == '\n' || buf2 == '\r'))
@@ -123,8 +119,17 @@ if(read1!=0)
 
 
 
-    close(fd1);
-    close(fd2);
+    if (close(fd1)==-1)
+    {
+        perror("Error in: close");
+        exit(-1);
+
+    }
+    if (close(fd2)==-1)
+    {
+        perror("Error in: close");
+        exit(-1);
+    }
     
     if(identity){
         return 1;
