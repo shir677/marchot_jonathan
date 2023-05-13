@@ -61,11 +61,11 @@ int main(int argc, char *argv[]) {
         space1=0;
         space2=0;
         
-        if (buf1 == ' ' || buf1 == '\t' || buf1 == '\n' || buf1 == '\r') {
+        if (buf1 == ' ' || buf1 == '\n' || buf1 == '\r') {
             space1=1;
         }
         
-        if (buf2 == ' ' || buf2 == '\t' || buf2 == '\n' || buf2 == '\r') {
+        if (buf2 == ' ' || buf2 == '\n' || buf2 == '\r') {
             space2=1;
         }
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 if(read1!=0)
     {
         identity=0;
-        while (buf1 == ' ' || buf1 == '\t' || buf1 == '\n' || buf1 == '\r') {
+        while (buf1 == ' ' || buf1 == '\n' || buf1 == '\r') {
             read1 = read(fd1, &buf1, 1);
             if (read1 == 0) {
                 break;
@@ -92,7 +92,7 @@ if(read1!=0)
                 exit(-1);
             }
         }
-        if (!(buf1 == ' ' || buf1 == '\t' || buf1 == '\n' || buf1 == '\r'))
+        if (!(buf1 == ' ' || buf1 == '\n' || buf1 == '\r'))
         {
             similar=0;
         }
@@ -101,7 +101,7 @@ if(read1!=0)
     if(read2!=0)
     {
         identity=0;
-        while (buf2 == ' ' || buf2 == '\t' || buf2 == '\n' || buf2 == '\r') {
+        while (buf2 == ' ' || buf2 == '\n' || buf2 == '\r') {
             read1 = read(fd2, &buf2, 1);
             if (read1 == 0) {
                 break;
@@ -111,7 +111,7 @@ if(read1!=0)
                 exit(-1);
             }
         }
-        if (!(buf2 == ' ' || buf2 == '\t' || buf2 == '\n' || buf2 == '\r'))
+        if (!(buf2 == ' ' || buf2 == '\n' || buf2 == '\r'))
         {
             similar=0;
         }
@@ -143,4 +143,3 @@ if(read1!=0)
 
     
 }
-
