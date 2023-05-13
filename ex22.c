@@ -191,8 +191,6 @@ void add_to_csv(char *student_name, char* score, char *comment) {
 int compile_c_program(char* c_file_path,char* out_file_path, char* student_name)
 {
 
-    int compiled=0;
-
     pid_t pid = fork();
     if (pid < 0) {
         // Fork failed
@@ -223,21 +221,30 @@ int compile_c_program(char* c_file_path,char* out_file_path, char* student_name)
         perror("Error in: wait");
         return 0;
     }
-
-    if (access(out_file_path, X_OK) == 0) {
-    compiled = 1;
+    int access_return=access(out_file_path, F_OK);
+    if (access_return == 0) {
+    // out file exists. means file was compiled successfully.
+     return 1;
     } 
-                
-    if(!compiled)
-    {
+    else if (access_return == -1) {
+    //access failed.
+    if (errno == ENOENT) {
+        //This errno flag means file does not exist. this means program was not compiled
         add_to_csv(student_name,"10","COMPILATION_ERROR");
+        return 0;
+    } else {
+        // there was an error in access.
+        perror("Error in: access");
+        return 0;
+    }       
+    }
+    else{
+        return 0;
     }
     }
-
-    return compiled;
-
 
 }
+
 
 int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char*student_name )
 {
