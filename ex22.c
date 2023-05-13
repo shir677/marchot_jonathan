@@ -26,41 +26,6 @@ int is_directory(const char* path) {
     return S_ISDIR(stat_buf.st_mode);
 }
 
-int is_directory_with_only_subdirectories(const char* path) {
-
-    DIR* dir = opendir(path);
-    if (dir == NULL) {
-        // Failed to open directory
-        return 0;
-    }
-
-    int only_subdirs = 1;
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            // Skip . and .. entries
-            continue;
-        }
-
-        char entry_path[BUFSIZE];
-        strcpy(entry_path, path);
-        strcat(entry_path, "/");
-        strcat(entry_path, entry->d_name);
-
-        if (!is_directory(entry_path)) {
-            // Entry is not a directory
-            only_subdirs = 0;
-            break;
-        }
-    }
-
-    if (closedir(dir)==-1)
-    {
-        perror("Error in: closedir");
-    }
-
-    return only_subdirs;
-}
 
 int is_regular_file(const char* path) {
     struct stat stat_buf;
@@ -77,11 +42,12 @@ int is_regular_file(const char* path) {
 void check_valid_paths(char* user_dir,char* input_file,char* output_file)
 {
     DIR* dir = opendir(user_dir);
-    if (dir == NULL || !is_directory_with_only_subdirectories(user_dir)) {
+    if (dir == NULL || !is_directory(user_dir)) {
         char *error_dir = "Not a valid directory\n";
         if(write(1, error_dir,strlen(error_dir))==-1){ };
         exit(-1);
     }
+
     if (closedir(dir)==-1)
     {
         perror("Error in: closedir");   
@@ -253,11 +219,14 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     strcat(program_output_file, "/");
     strcat(program_output_file,"program_output.txt");
 
+    int run=0;
+
     pid_t pid = fork();
     if (pid < 0) {
     // Fork failed
     perror("Error in: fork");
-    return 0;
+    goto cleanup;
+
     } else if (pid == 0) {
     // Child process
 
@@ -307,15 +276,16 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     int status;
     if (wait(&status) == -1) {
         perror("Error in: wait");
+        goto cleanup;
     }
 
     
     if (WIFEXITED(status)) {
         //child exited normally
         int exit_status = WEXITSTATUS(status);
-        if(exit_status == -1) {
-        //in case child return error.
-            return 0;
+        if(exit_status != -1) {
+            // child successfully completed run and did not exit with -1.
+            run=1;
         }
     }
     else if(WIFSIGNALED(status)) {
@@ -325,22 +295,19 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     // Kill the child process
     kill(pid, SIGKILL);
     add_to_csv(student_name,"20","TIMEOUT");
-    return 0;
     } 
     }
     else{
         //child did not exit normally.
-        return 0;
     }
     
+    cleanup:
+        if (remove(out_file_path)==-1)
+        {
+            perror("Error in: remove");
+        }
 
-    if (remove(out_file_path)==-1)
-    {
-        perror("Error in: remove");
-        return 0;
-    }
-
-    return 1;
+    return run;
 
 }
 }
@@ -356,6 +323,7 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
     if (pid < 0) {
         // Fork failed
         perror("Error in: fork");
+        goto cleanup;
 
     } else if (pid == 0) {
         int fd_err = open("errors.txt", O_WRONLY | O_APPEND | O_CREAT, 0644);
@@ -376,6 +344,7 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
     int status1;
     if (waitpid(pid, &status1, 0) == -1) {
         perror("Error in: waitpid");
+        goto cleanup;
     }
 
     if (WIFEXITED(status1)) {
@@ -392,14 +361,15 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
             add_to_csv(student_name,"100","EXCELLENT");
         }
         else{
-
+            //abnormal exit status.
         }  
     }
 
-    if (remove(program_output_file)==-1)
-    {
-        perror("Error in: remove");
-    }
+    cleanup:
+        if (remove(program_output_file)==-1)
+        {
+            perror("Error in: remove");
+        }
 }
 }
 
@@ -422,6 +392,11 @@ void scan_directory(const char* user_dir, char* input_file, char* output_file) {
         strcpy(subdir_path, user_dir);
         strcat(subdir_path, "/");
         strcat(subdir_path, student_name);
+
+        if(!is_directory(subdir_path))
+        {
+            continue;
+        }
 
         DIR* subdir = opendir(subdir_path);
         if (subdir == NULL) {
