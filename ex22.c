@@ -78,8 +78,8 @@ void check_valid_paths(char* user_dir,char* input_file,char* output_file)
 {
     DIR* dir = opendir(user_dir);
     if (dir == NULL || !is_directory_with_only_subdirectories(user_dir)) {
-        // Failed to open directory (directory does not exist or permission denied)
-        perror("Not a valid directory\n");
+        char *error_dir = "Not a valid directory\n";
+        if(write(1, error_dir,strlen(error_dir))==-1){ };
         exit(-1);
     }
     if (closedir(dir)==-1)
@@ -90,7 +90,8 @@ void check_valid_paths(char* user_dir,char* input_file,char* output_file)
     int fd1 = open(input_file, O_RDONLY);
     if (fd1 == -1 || !is_regular_file(input_file)) {
         // Failed to open file (file cannot be created or permission denied)
-        perror("Input file not exist\n");
+        char *error_input="Input file not exist\n";
+        if(write(1, error_input,strlen(error_input))==-1){ };    
         exit(-1);
     }
 
@@ -104,7 +105,8 @@ void check_valid_paths(char* user_dir,char* input_file,char* output_file)
     int fd2 = open(output_file, O_RDONLY);
     if (fd2 == -1 || !is_regular_file(output_file)) {
         // Failed to open file (file cannot be created or permission denied)
-        perror("Output file not exist\n");
+        char *error_out="Output file not exist\n";
+        if(write(1, error_out,strlen(error_out))==-1){ };    
         exit(-1);
     }
     
@@ -219,6 +221,7 @@ int compile_c_program(char* c_file_path,char* out_file_path, char* student_name)
     if (wait(&status)==-1)
     {
         perror("Error in: wait");
+        return 0;
     }
 
     if (access(out_file_path, X_OK) == 0) {
@@ -262,6 +265,8 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
         exit(-1);
     }
 
+    //redirect stdin to input file.
+
     int fd_in = open(input_file, O_RDONLY);
     if (fd_in == -1) {
         perror("Error in: open");
@@ -272,7 +277,7 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
         exit(-1);
     }
 
-
+    //redirect stdout to output file.
     int fd_out = open(program_output_file, O_WRONLY | O_CREAT, 0644);
     if (fd_out == -1) {
         perror("Error in: open");
@@ -296,7 +301,17 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     if (wait(&status) == -1) {
         perror("Error in: wait");
     }
-    if (WIFSIGNALED(status)) {
+
+    
+    if (WIFEXITED(status)) {
+        //child exited normally
+        int exit_status = WEXITSTATUS(status);
+        if(exit_status == -1) {
+        //in case child return error.
+            return 0;
+        }
+    }
+    else if(WIFSIGNALED(status)) {
     // Program was terminated by a signal
     if (WTERMSIG(status) == SIGALRM) {
     // Program took too long to run
@@ -306,6 +321,11 @@ int run_c_program(char* input_file, char* out_file_path, char* subdir_path, char
     return 0;
     } 
     }
+    else{
+        //child did not exit normally.
+        return 0;
+    }
+    
 
     if (remove(out_file_path)==-1)
     {
@@ -331,6 +351,15 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
         perror("Error in: fork");
 
     } else if (pid == 0) {
+        int fd_err = open("errors.txt", O_WRONLY | O_APPEND | O_CREAT, 0644);
+        if (fd_err == -1) {
+            perror("Error in: open");
+            exit(-1);
+        }
+        if (dup2(fd_err, 2) == -1) {
+            perror("Error in: dup2");
+            exit(-1);
+        }
         char* args[] = {"./comp.out", program_output_file, output_file, NULL};
         execvp("./comp.out", args);
         perror("Error in: execvp");
@@ -352,8 +381,11 @@ void compare_output(char* student_name,char* subdir_path, char* output_file)
         {
             add_to_csv(student_name,"75","SIMILAR");
         }
-        else{
+        else if(return_value==1){
             add_to_csv(student_name,"100","EXCELLENT");
+        }
+        else{
+
         }  
     }
 
@@ -368,7 +400,7 @@ void scan_directory(const char* user_dir, char* input_file, char* output_file) {
     DIR* dir = opendir(user_dir);
     if (dir == NULL) {
         perror("Error in: opendir");
-        return;
+        exit(-1);
     }
 
     struct dirent* entry;
@@ -459,7 +491,7 @@ int main(int argc, char *argv[]) {
 
     int fd = open(argv[1], O_RDONLY);  // Open config file for reading
     if (fd == -1) {
-        perror("Invalid configuration file");
+        perror("Error in: open");
         exit(-1);
     }
 
@@ -469,7 +501,12 @@ int main(int argc, char *argv[]) {
 
     parse_configuration_file(fd,user_dir,input_file,output_file);
 
-    close(fd);  // Close configuration file
+    // Close configuration file
+    if(close(fd))
+    {
+        perror("Error in: close");
+        exit(-1);
+    } 
 
     check_valid_paths(user_dir,input_file,output_file);
 
